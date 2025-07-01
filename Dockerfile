@@ -13,6 +13,13 @@ RUN yarn config set -H nodeLinker node-modules \
 
 # Copy source and build (compiles TS + Admin UI)
 COPY . .
+
+# ── NEW: declare the build‑time argument
+ARG NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+
+# ── NEW: expose it to the build as an environment variable
+ENV NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY}
+
 RUN yarn build        # adjust if your script name differs
 
 # ---------- Runtime stage ----------------------------------------------
