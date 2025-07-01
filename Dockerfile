@@ -1,44 +1,22 @@
-############################################
-# Stage 1 – deps                           #
-############################################
-FROM node:20-alpine AS deps
-
+# ---------- Build stage -------------------------------------------------
+FROM node:20-alpine AS build
 WORKDIR /app
 
-# Enable Corepack + Yarn 4.9.1
+# Enable Corepack and activate Yarn 4.9.1
 RUN corepack enable \
  && corepack prepare yarn@4.9.1 --activate
 
-# Copy manifest files first
+# Copy manifests and install dependencies into node_modules
 COPY package.json yarn.lock ./
-
-# Force Yarn to use node_modules and install
 RUN yarn config set -H nodeLinker node-modules \
  && yarn install --immutable
 
-
-############################################
-# Stage 2 – build                          #
-############################################
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-
-RUN corepack enable \
- && corepack prepare yarn@4.9.1 --activate
-
-# Bring in entire project (includes node_modules from deps)
-COPY --from=deps /app ./
+# Copy source and build (compiles TS + Admin UI)
 COPY . .
+RUN yarn build        # adjust if your script name differs
 
-RUN yarn build
-
-
-############################################
-# Stage 3 – runtime                        #
-############################################
+# ---------- Runtime stage ----------------------------------------------
 FROM node:20-alpine
-
 WORKDIR /app
 
 RUN corepack enable \
@@ -46,7 +24,8 @@ RUN corepack enable \
 
 ENV NODE_ENV=production
 
-COPY --from=builder /app ./
+# Bring in compiled app and its node_modules
+COPY --from=build /app ./
 
 EXPOSE 9000
 CMD ["sh","-c","medusa migrations run && yarn start"]
